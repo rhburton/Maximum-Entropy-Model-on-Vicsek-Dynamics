@@ -13,24 +13,24 @@ figureIndex = 15 # parameter that keeps track of which figure you're on, start h
 ncMax = 99
 
 #import Vicsek parameters from 1st line of data file
-f = open("FinalDataandPlots/nstarVSnv/nVicVSnstar9.txt", "r")
+f = open("VicsekData.txt", "r")
 fl = f.readlines()
 (interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium, snapsPerFlock, pollInterval, numFlocks) = tf.importVicsekParam(fl[0])
-betaVic = 2./sigmaVic
+betaVic = 2./sigmaVic # sigmaVic is the standard distribution of the noise
 JprodVicsek = JVic*betaVic
 print "Jprod for the ENTIRE Vicsek flock is %s at n_cVic = %s"%(JprodVicsek, ncVic)
 print ""
 
 
 ###############################################
-# HACK TO PUT ALL FLOCKS INTO ONE SIMULATION
+# Put all flocks into one simulation
 snapsPerFlock = snapsPerFlock*numFlocks
 numFlocks=1
 ###############################################
 
 
 
-# initialize the data we take for every frame. For quantity X we have list X[i][t]: ith ctn flock, t'th
+# initialize the data we take for every frame. For quantity X we have list X[i][t]: ith continuous flock
 # t'th snapshot within that flock
 optimalNcSnapshot = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
 optimalJSnapshot = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
@@ -54,8 +54,6 @@ for flockID in range(numFlocks):
 		print avMagnetization[flockID]
 		(M, theta_0) = tf.Magnetization(config, N)
 		avMagnetization[flockID] += M
-	#print detProdTensor[0]
-	#print ncCorrTensor[0]15# each compenent refers to J global of the 
 	avMagnetization[flockID] = avMagnetization[flockID]/snapsPerFlock
 globalJVec, JarithAvVec = tf.globalJ(optimalJSnapshot, numFlocks, snapsPerFlock)
 print "Global J Vector: %s"%globalJVec
@@ -74,13 +72,9 @@ print "Global nc = %s"%globalNcVec
 arithAvNc = 0
 arithAvNcSq = 0
 ncVector = []
-k=0
 for flockID in range(numFlocks):
 	for t in range(snapsPerFlock):
 		ncVector.append(optimalNcSnapshot[flockID][t])
-		#arithAvNc += float(optimalNcSnapshot[flockID][t])/(numFlocks*snapsPerFlock)
-		#arithAvNcSq += float(optimalNcSnapshot[flockID][t]**2)/(numFlocks*snapsPerFlock)
-		k+=1 
 arithAvNc = np.average(ncVector)
 stdDevNc = np.std(ncVector)
 #stdDevNc = np.sqrt(arithAvNcSq - arithAvNc**2)
