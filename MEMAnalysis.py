@@ -18,8 +18,8 @@ fl = f.readlines()
 (interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium, snapsPerFlock, pollInterval, numFlocks) = tf.importVicsekParam(fl[0])
 betaVic = 2./sigmaVic # sigmaVic is the standard distribution of the noise
 JprodVicsek = JVic*betaVic
-print "Jprod for the ENTIRE Vicsek flock is %s at n_cVic = %s"%(JprodVicsek, ncVic)
-print ""
+print ("Jprod for the ENTIRE Vicsek flock is %s at n_cVic = %s"%(JprodVicsek, ncVic))
+print ("")
 
 
 ###############################################
@@ -41,7 +41,7 @@ avMagnetization = [0 for j in range(numFlocks)]
 for flockID in range(numFlocks):
 	for t in range(snapsPerFlock):
 		lineIndex = snapsPerFlock*flockID + t + 1 # grab the correct configuration from file
-		#print "lineIndex = %s, flockID = %s/%s, t = %s/%s"%(lineIndex, flockID, numFlocks, t, snapsPerFlock)
+		#print ("lineIndex = %s, flockID = %s/%s, t = %s/%s"%(lineIndex, flockID, numFlocks, t, snapsPerFlock))
 		configLine = fl[lineIndex]
 		config = tf.importConfig(configLine, N)
 
@@ -50,23 +50,23 @@ for flockID in range(numFlocks):
 		
 		optimalNcSnapshot[flockID][t] = ncOptimalSnap
 		optimalJSnapshot[flockID][t] = Jsnap
-		print "\rOptimal J snapshot is %s, Optimal n_c snapshot is %s"%(Jsnap, ncOptimalSnap)
-		print avMagnetization[flockID]
+		print ("\rOptimal J snapshot is %s, Optimal n_c snapshot is %s"%(Jsnap, ncOptimalSnap))
+		print (avMagnetization[flockID])
 		(M, theta_0) = tf.Magnetization(config, N)
 		avMagnetization[flockID] += M
 	avMagnetization[flockID] = avMagnetization[flockID]/snapsPerFlock
 globalJVec, JarithAvVec = tf.globalJ(optimalJSnapshot, numFlocks, snapsPerFlock)
-print "Global J Vector: %s"%globalJVec
+print ("Global J Vector: %s"%globalJVec)
 globalNcVec, ncArithAvVec, highestAvLogLike = tf.globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFlock, plotLogLikeVSncGlobal, ncMax)
-print "Average Magnetization vector = %s"%avMagnetization
+print ("Average Magnetization vector = %s"%avMagnetization)
 '''
-print "Average J Vector = %s\n"%JarithAv
-print "Global J Vector = %s\n"%globalJVector
-print "Product of all possible determinants = %s \n"%detProdTensor
-print "Every single nc correlation = %s"%(ncCorrTensor)
+print ("Average J Vector = %s\n"%JarithAv)
+print ("Global J Vector = %s\n"%globalJVector)
+print ("Product of all possible determinants = %s \n"%detProdTensor)
+print ("Every single nc correlation = %s"%(ncCorrTensor))
 '''
-print "Global J Vector = %s\n"%globalJVec
-print "Global nc = %s"%globalNcVec
+print ("Global J Vector = %s\n"%globalJVec)
+print ("Global nc = %s"%globalNcVec)
 
 # print arithmetic n_c estimate and its variance
 arithAvNc = 0
@@ -78,9 +78,9 @@ for flockID in range(numFlocks):
 arithAvNc = np.average(ncVector)
 stdDevNc = np.std(ncVector)
 #stdDevNc = np.sqrt(arithAvNcSq - arithAvNc**2)
-print "Arithmetic <n*> = %s"%arithAvNc
-print "Arithmetic <n*> Standard Dev = %s"%stdDevNc
-print "LogLike of ng = %s"%highestAvLogLike
+print ("Arithmetic <n*> = %s"%arithAvNc)
+print ("Arithmetic <n*> Standard Dev = %s"%stdDevNc)
+print ("LogLikelihood of n_global = %s"%highestAvLogLike)
 
 plt.show()
 
