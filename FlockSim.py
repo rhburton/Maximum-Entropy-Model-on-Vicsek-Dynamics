@@ -34,11 +34,11 @@ config = [[np.random.uniform(0, L), np.random.uniform(0, L), 1] for i in range(N
 # Determinant Product is zero if the flocks are non-interacting (if so, throw out this run)
 if interactionType != "metric":
 	logDetProd = tf.checkVicsekNcSize(config, N, ncVic, L)
-print "Determinant Product = %s"%logDetProd
+print ("Determinant Product = %s"%logDetProd)
 
 # <Phi>_exp from equation 4.14 with the approximation N >> 1
 expectedCorrNcV = 1 - 1./(JVic*betaVic*ncVic)
-print "MEM expects an n_c nearest neighbor correlation of %s"%expectedCorrNcV
+print ("MEM expects an n_c nearest neighbor correlation of %s"%expectedCorrNcV)
 
 
 
@@ -49,7 +49,7 @@ t=0 						# frame number
 framesToEquilibrium = 100 	# wait this many frames before beginning draw
 snapshotsPerFlock = 1 		# record this many snapshots in one poll 
 pollInterval = 50		 	# number of frames between recording intervals
-numFlocks = 30      		# number of times we poll for flock data
+numFlocks = 10      		# number of times we poll for flock data
 plotFlockThisOften = 1 		# plot the flock every this many frames
 
 #write initial data to line 1
@@ -73,7 +73,7 @@ while True:
 		currentMagnetization = tf.Magnetization(config, N)[0]
 		CorrNcV = tf.nnAvCorrelation(config, N, ncVic, 0)
 		JBeta_MEM = 1/(ncVic * (1-CorrNcV))
-		print "Magnetization = %s, CorrNcV = %s, JBeta_MEM = %s"%(currentMagnetization, CorrNcV, JBeta_MEM)
+		print ("Magnetization = %s, CorrNcV = %s, JBeta_MEM = %s"%(currentMagnetization, CorrNcV, JBeta_MEM))
 	# check thermal cutoffs every so often
 	if t%framesToEquilibrium==0: 
 		CorrNcV = tf.nnAvCorrelation(config, N, ncVic, 0)
@@ -81,21 +81,21 @@ while True:
 		# this cutoff is to alert us if the flock has very very high magnetization 
 		# (MEM model is unstable in this situation)
 		if M > cutoffM:
-			print "\rM cutoff reached"
+			print ("\rM cutoff reached")
 			for j in range(framesToEquilibrium):
 				config = tf.newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
 			break
 		if CorrNcV > cutoffCorrNcV:
-			print "\rCorrNcV cutoff reached"
+			print ("\rCorrNcV cutoff reached")
 			for j in range(framesToEquilibrium):
 				config = tf.newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
 			break
 
 tf.PlotVicsek(config, N, L, keepPlot)
-print "Reached Equlibrium"
+print ("Reached Equlibrium")
 # record data for numFlocks number of short bursts of consecutive frames
 for i in range(numFlocks):
-	print "\rTesting flock number %s"%i
+	print ("\rTesting flock number %s"%i)
 	# loop for burst of consecutive frames
 	for j in range(snapshotsPerFlock):
 		config = tf.newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
@@ -105,16 +105,16 @@ for i in range(numFlocks):
 		# print to consol the CorrNcV and estimated Jbeta info
 		CorrNcV = tf.nnAvCorrelation(config, N, ncVic, 0)
 		JBeta_MEM = 1/(ncVic * (1-CorrNcV))
-		print "CorrN_c = %s, JBeta_MEM = %s"%(tf.nnAvCorrelation(config, N, ncVic, 0), JBeta_MEM)
+		print ("CorrN_c = %s, JBeta_MEM = %s"%(tf.nnAvCorrelation(config, N, ncVic, 0), JBeta_MEM))
 
 	#tf.PlotVicsek
-	print "flock %s recorded"%(i)
+	print ("flock %s recorded"%(i+1))
 	if i+1 == numFlocks: break
 	# this is the wait between bursts
 	for j in range(pollInterval):
 		sys.stdout.write("\rPoll refreshing %s / %s "%(j, pollInterval))
 		sys.stdout.flush()
 		config = tf.newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
-print "\rFinished"
+print ("\rFinished")
 f.close()
 plt.show()
