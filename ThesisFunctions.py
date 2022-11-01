@@ -39,7 +39,7 @@ def globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFloc
 			if logLikeAverage[nc-1] > highestAvLikelihood: 
 				globalNcVec[flockID] = nc
 				highestAvLikelihood = logLikeAverage[nc-1]
-		print "Global n_c = %s"%globalNcVec[flockID]
+		print ("Global n_c = %s"%globalNcVec[flockID])
 
 
 		#plot log likelihood vs n_c when asked
@@ -78,13 +78,12 @@ def globalJ(optimalJSnapshot, numFlocks, snapsPerFlock):
 # import a flock snapshot from a line in the textfile
 def importConfig(configLine, N):
 	config = [[0, 0, 0] for j in range(N)]
-	parsedNumbers = re.findall('-?\d+.\d+', configLine)
+	parsedNumbers = re.findall('-?\d+\.\d+e?-?\d*', configLine)
+
 	for i in range(N):
 		config[i][0] = parsedNumbers[3*i + 0]
 		config[i][1] = parsedNumbers[3*i + 1]
 		config[i][2] = parsedNumbers[3*i + 2]
-	# test if the config string is parsed correctly
-	if "%s\n"%re.sub('\'', '', str(config)) != configLine: raise Exception('Config import FAILED')
 	for i in range(N):
 		for j in range(3):
 			config[i][j] = float(config[i][j])
@@ -93,7 +92,7 @@ def importConfig(configLine, N):
 # return the flock parameters in a flock data file, properly typecasted
 def importVicsekParam(fileLine1):
 	(interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium, snapshotsPerFlock, pollInterval, numFlocks, BLANK) = re.split(",", fileLine1)
-	#print "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"%(interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium,snapshotsPerFlock, pollInterval,numFlocks, BLANK)
+	#print ("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"%(interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium,snapshotsPerFlock, pollInterval,numFlocks, BLANK))
 	# typecast correctly
 	N = int(N)
 	ncVic = int(ncVic)
@@ -185,7 +184,7 @@ def Magnetization(config, N):
 	M = math.sqrt(avMx**2 + avMy**2)
 	# use arctan2 to give the branch cut associated with the counter-clockwise angle from the x-axis
 	theta_0 = np.arctan2(avMy, avMx)
-	#print "avMx = %s, avMy = %s"%(avMx, avMy)
+	#print ("avMx = %s, avMy = %s"%(avMx, avMy))
 	return (M, theta_0)
 
 
@@ -212,10 +211,10 @@ def VicsekDistanceSq(config, i, j, L):
 	# sort list to find shortest distance from point i to point j
 	possibleDist.sort()
 	if possibleDist[0] > (float(L)**2)/2:
-		print "BOUNDARY CONDITIONS ARE MESSED UP i=%s j=%s"%(i, j)
-		print "x1=%s y1=%s"%(x1, y1)
-		print "x2=%s y2=%s"%(x2, y2)
-		print "shortest distance = %s"%(possibleDist[0])
+		print ("BOUNDARY CONDITIONS ARE MESSED UP i=%s j=%s"%(i, j))
+		print ("x1=%s y1=%s"%(x1, y1))
+		print ("x2=%s y2=%s"%(x2, y2))
+		print ("shortest distance = %s"%(possibleDist[0]))
 
 	return possibleDist[0]
 
@@ -301,32 +300,32 @@ def logLikelihoodFn(config, N, n_c, L):
 
 	# compute eigenvalues of Mij: eigh is for symmetric matrices
 	eVal = np.linalg.eigvalsh(Mij)
-	#print "Eigenvalues are %s"%eVal
+	#print ("Eigenvalues are %s"%eVal)
 	rank = np.linalg.matrix_rank(Mij)
 	nullspace = N-rank
 
-	#print "\n####### n_c = %s #######"%(n_c)
-	#print "Nullspace = %s"%(nullspace)
+	#print ("\n####### n_c = %s #######"%(n_c))
+	#print ("Nullspace = %s"%(nullspace))
 	# examine exactly which eigenvalues are supposed to correspond to nullvectors
 	#for i in range(0, nullspace):
-		#print "0-eigenvalue --- %s"%(eVal[i])
-	#print "Biggest 0-eigenvalue is %s"%(eVal[nullspace - 1])
-	#print "Spectral Gap is %s"%(eVal[nullspace])
+		#print ("0-eigenvalue --- %s"%(eVal[i]))
+	#print ("Biggest 0-eigenvalue is %s"%(eVal[nullspace - 1]))
+	#print ("Spectral Gap is %s"%(eVal[nullspace]))
 	'''if (N - rank) > 1:
-		print "\nn_c = %s HAS AN ADDITIONAL %s SYMMETRIES "%(n_c, N - rank - 1)'''
+		print ("\nn_c = %s HAS AN ADDITIONAL %s SYMMETRIES "%(n_c, N - rank - 1))'''
 	
 	'''
 	# check for negative eigenvalues
 	negativeEigenvals = 0
-	print "Eigenvalues: %s"%(eVal)
+	print ("Eigenvalues: %s"%(eVal))
 
 	# check for anomalous eigenvalues
 	for i in range(len(eVal)):
 		if eVal[i] < 0: negativeEigenvals += 1
 	if negativeEigenvals > (N - rank):
-		print ">>>>>>>>>> THERE ARE/IS %s NEGATIVE EIGENVALUE(s) <<<<<<<<<<"%(negativeEigenvals)
+		print (">>>>>>>>>> THERE ARE/IS %s NEGATIVE EIGENVALUE(s) <<<<<<<<<<"%(negativeEigenvals))
 		for k in range(0, N):
-			if eVal[k] < 0: print ">>>>>>>>>> a_%s = %s <<<<<<<<<<"%(k, eVal[k])
+			if eVal[k] < 0: print (">>>>>>>>>> a_%s = %s <<<<<<<<<<"%(k, eVal[k]))
 	'''
 
 	#np.log is base e
@@ -344,8 +343,8 @@ def logLikelihoodFn(config, N, n_c, L):
 	determinantError = 100*(math.exp(logdetMdagger)-determinantProduct)/(math.exp(logdetMdagger))
 
 	if logDetError > 0.01 or determinantError > 0.0001: 
-		print "DETERMINANT ERROR WAS BIG, %s OR LOG DETERMINANT ERROR WAS BIG, %s"%(determinantError,logDetError)
-	#print "logdetMdagger = %s"%(logdetMdagger)
+		print ("DETERMINANT ERROR WAS BIG, %s OR LOG DETERMINANT ERROR WAS BIG, %s"%(determinantError,logDetError))
+	#print ("logdetMdagger = %s"%(logdetMdagger))
 	logLike = logdetMdagger
 	detContribution = logdetMdagger
 
@@ -358,12 +357,12 @@ def logLikelihoodFn(config, N, n_c, L):
 	otherLogLike = 0
 	for i in range(nullspace, N):
 		otherLogLike += np.log(eVal[i]/(n_c*(1- ncCorr)))
-	print "log likelihood discrepancy = %s"%str(logLike-otherLogLike)
+	print ("log likelihood discrepancy = %s"%str(logLike-otherLogLike))
 	'''
 
 	# is the (N-1)/2 in the 2nd to last line in 4.15 indeed negligible?
 	percentRank = 100* np.absolute(logLike - logdetMdagger)/logLike
-	#print "The rank term term is %s %% of the log likelihood term"%(percentRank)
+	#print ("The rank term term is %s %% of the log likelihood term"%(percentRank))
 
 	return logLike, detContribution, corrContribution, determinantProduct, ncCorr
 
@@ -387,7 +386,7 @@ def OptimizeN_c(config, N, L, plotLogLikeVSn_c, ncMax):
 		#sys.stdout.write("\rTime Elapsed = %s"%(str(elapsedTime)[:7]))
 		#sys.stdout.write("\r%s%%"%(percentComplete))
 		#sys.stdout.write("\n estimated time to completion: %s"%(estTime))
-		sys.stdout.write("\rtesting %s / %s "%(nc, ncMax))
+		sys.stdout.write("\rtesting n_c = %s / %s "%(nc, ncMax))
 		sys.stdout.flush()
 
 
@@ -398,8 +397,8 @@ def OptimizeN_c(config, N, L, plotLogLikeVSn_c, ncMax):
 		if plotLogLikeVSn_c == "yes":
 			plt.figure(2)
 			n_cVec = [i for i in range(1, ncMax+1)]
-			#print "n_cVec = %s"%(n_cVec)
-			#print "logLikelihood vector = %s"%(logLike)
+			#print ("n_cVec = %s"%(n_cVec))
+			#print ("logLikelihood vector = %s"%(logLike))
 			plt.title('Log Likelihood vs n_c')
 			plt.ylabel('Log Likelihood (dimensionless)')
 			plt.xlabel('n_c')
@@ -426,8 +425,8 @@ def OptimizeN_c(config, N, L, plotLogLikeVSn_c, ncMax):
 	if plotLogLikeVSn_c == "yes":
 		plt.figure(2)
 		n_cVec = [i for i in range(1, N)]
-		#print "n_cVec = %s"%(n_cVec)
-		#print "logLikelihood vector = %s"%(logLike)
+		#print ("n_cVec = %s"%(n_cVec))
+		#print ("logLikelihood vector = %s"%(logLike))
 		plt.title('Log Likelihood vs n_c')
 		plt.ylabel('Log Likelihood (dimensionless)')
 		plt.xlabel('n_c')
@@ -508,7 +507,7 @@ def newConfigVicsekTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, J
 	# now order by length, note dSort[i][0] is just 0
 	for n in range(N):
 		dSort[n].sort()
-	#print "Sorted array is %s"%(dSort[5])
+	#print ("Sorted array is %s"%(dSort[5]))
 
 	# identify the sets of n_c neighborhoods
 	nbhSet = [[0 for i in range(ncVic)] for j in range(N)]
@@ -519,7 +518,7 @@ def newConfigVicsekTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, J
 				if Dsq[i][k] == dSort[i][ncIndx+1]:
 					nbhSet[i][ncIndx] = k
 					break
-	#print "Naive topo neighborhood set = %s"%(nbhSet)
+	#print ("Naive topo neighborhood set = %s"%(nbhSet))
 
 	# next update Vicsek positions/velocities (note the asymmetry) 
 	# DON'T FORGET ABOUT THE SELF-COUNTING! not scaled by dt, J_vic
@@ -582,7 +581,7 @@ def newConfigVicsekSymTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic
 		dy = nu * np.sin(config2[i][2])*dtVic
 		config2[i][0] = (config[i][0] + dx)%L
 		config2[i][1] = (config[i][1] + dy)%L
-	#print "SymTopo neighborhood set = %s"%(nij)
+	#print ("SymTopo neighborhood set = %s"%(nij))
 	return config2
 
 # calls the appropriate Vicsek ineraction rules based on parameter "ineractionType"
