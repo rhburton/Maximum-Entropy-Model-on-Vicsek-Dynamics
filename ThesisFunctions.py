@@ -1,4 +1,4 @@
-# Function file for polished code
+# Miscellaneous function file
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
@@ -11,15 +11,20 @@ import time
 import re
 
 # returns most likely n_c provided that n_c is known to be constant across all snapshots
+# detProdTensor - vector of vectors of determinant products over consecutive snapshots
+# ncCorrTensor - vector of vectors of nearest nc neighbor correlation over many snapshots
+# N - number of particles in the flock
+# ncMax - largest number of nearest neighbors considered by the maximum entropy model
 def globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFlock, plotLogLikeVSncGlobal, ncMax):
 	globalNcVec = [0 for i in range(numFlocks)]
 	ncArithAvVec = [0 for i in range(numFlocks)]
 
-	figureIndx = 69
+	figureIndx = 70
 	for flockID in range(numFlocks):
 		# this vector measures the average likelihood over all snapshots for J_g at each desired n_c
 		logLikeAverage = [0 for i in range(ncMax)]
 		for nc in range(1, ncMax+1):
+			# one of the lines in equation 4.15
 			for t in range(snapsPerFlock):
 				logLike = 0.5*(N-1)*np.log((globalJVec[flockID]/(2*math.pi)))
 				logLike += 0.5*np.log(detProdTensor[flockID][t][nc-1])
@@ -29,6 +34,8 @@ def globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFloc
 
 		highestAvLikelihood = logLikeAverage[0]
 		for nc in range(1, ncMax+1):
+			# choose whichever is larger, the 
+			# EXPLAIN THIS BETTER
 			if logLikeAverage[nc-1] > highestAvLikelihood: 
 				globalNcVec[flockID] = nc
 				highestAvLikelihood = logLikeAverage[nc-1]
@@ -51,7 +58,10 @@ def globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFloc
 
 	return globalNcVec, ncArithAvVec, highestAvLikelihood
 
-# returns the most likely J provided that J is known to be constant across all snapshots
+# returns the most likely J (interaction strength) provided that J is known to be 
+# constant across all snapshots
+# opimalJSnapshot - ?????
+# see equation 8.6 in Appendix
 def globalJ(optimalJSnapshot, numFlocks, snapsPerFlock):
 	globalJVector = [0 for i in range(numFlocks)]
 	JarithmeticAvVec = [0 for i in range(numFlocks)]
@@ -65,7 +75,7 @@ def globalJ(optimalJSnapshot, numFlocks, snapsPerFlock):
 		globalJVector[flock] = snapsPerFlock/inverseSum
 	return (globalJVector, JarithmeticAvVec)
 
-# import a flock snapshot
+# import a flock snapshot from a line in the textfile
 def importConfig(configLine, N):
 	config = [[0, 0, 0] for j in range(N)]
 	parsedNumbers = re.findall('-?\d+.\d+', configLine)
@@ -101,6 +111,7 @@ def importVicsekParam(fileLine1):
 
 # plots Vicsek magnetization vs time
 def plotVicsekMvsTime(MvsT):
+	# time snapshot vector (x axis)
 	t = [i for i in range(len(MvsT))]
 
 	plt.figure(13)
@@ -121,6 +132,9 @@ def plotVicsekMvsTime(MvsT):
 	plt.pause(0.001)
 	return plt.figure(13)
 
+# Run a check on the flock to make sure the number of neighbors isn't so small that there are
+# non-interacting sub flocks. This is accomplished by checking that the associated Laplacian matrix 
+# has a sufficiently small nullspace.
 def checkVicsekNcSize(config, N, ncVic, L):
 	# make sure my flock is connected
 	(Jij, Sij) = VicsekInteractionMatrices(config, N, ncVic, L)
@@ -146,7 +160,6 @@ def PlotVicsek(config, N, L, keepPlot):
 		spinX[n] = np.cos(theta)
 		spinY[n] = np.sin(theta)
 
-	# ERASE IF I WANT TO SHOW NEAREST NEIGHBORS #########
 	plt.figure(1)
 	plt.clf()
 	plt.quiver(X, Y, spinX, spinY)
@@ -156,7 +169,7 @@ def PlotVicsek(config, N, L, keepPlot):
 	plt.ylim(-edge, L+edge)
 
 	plt.pause(.05)
-	if keepPlot == "yes": return plt.figure(1)
+	if keepPlot: return plt.figure(1)
 	return
 
 
@@ -185,6 +198,7 @@ def VicsekDistanceSq(config, i, j, L):
 	possibleDist = [0 for l in range(9)]
 	mod = L
 
+	# find distance, wrapping every possible way around the torus, taking the minimum
 	possibleDist[0] = (x1 - x2)**2 + (y1 - y2)**2
 	possibleDist[1] = (x1 - x2 - mod)**2 + (y1 - y2)**2
 	possibleDist[2] = (x1 - x2 + mod)**2 + (y1 - y2)**2
@@ -198,7 +212,7 @@ def VicsekDistanceSq(config, i, j, L):
 	# sort list to find shortest distance from point i to point j
 	possibleDist.sort()
 	if possibleDist[0] > (float(L)**2)/2:
-		print "BOUNDARY CONDITIONS ARE GOOFING UP i=%s j=%s"%(i, j)
+		print "BOUNDARY CONDITIONS ARE MESSED UP i=%s j=%s"%(i, j)
 		print "x1=%s y1=%s"%(x1, y1)
 		print "x2=%s y2=%s"%(x2, y2)
 		print "shortest distance = %s"%(possibleDist[0])
@@ -207,6 +221,8 @@ def VicsekDistanceSq(config, i, j, L):
 
 
 # computes matrices J_ij and S_ij from a Vicsek configuration
+# J_ij from equation 4.4
+# S_ij from equation 4.6 (labeled n_ij)
 def VicsekInteractionMatrices(config, N, n_c, L):
 	# compute effective nearest "n_c" neighbor interaction matrix
 	Jij = [[0 for j in range(N)] for i in range(N)]
@@ -217,13 +233,10 @@ def VicsekInteractionMatrices(config, N, n_c, L):
 		# find the nearest n_c neighbors to the ith particle
 		for j in range(N):
 			rVec[j] = VicsekDistanceSq(config, i, j, L)
-		# make a sorted copy (and yes, I do have to be this annoyingly explicit with my pointers)
+		# make a sorted copy
 		rSort = [0 for kappa in range(N)]
 		for kappa in range(N): rSort[kappa] = rVec[kappa]
 		rSort.sort()
-		#print rSort
-		#print rVec
-		#print rSort
 
 		# fill out the interaction matrices
 		# index over nearest n_c neighbors, discounting itself
@@ -235,7 +248,7 @@ def VicsekInteractionMatrices(config, N, n_c, L):
 					Sij[l][i] += 0.5
 	return Jij, Sij
 
-# computes the average correlation up to range n_c
+# computes the average correlation up to range n_c (<Psi>_exp)
 def nnAvCorrelation(config, N, n_c, Jij):
 	L=9
 	if Jij == 0:
@@ -261,7 +274,7 @@ def laplacianEigenvalues(Sij, N, n_c):
 			Mij[i][j] = -Sij[i][j]
 			if i == j: 
 				Mij[i][j] += SrowSum[i]
-	# compute eigenvalues of Mij: eigh is for symmetric matrices
+	# compute eigenvalues of Mij (eigh is for symmetric matrices)
 	(eVal, eVec) = np.linalg.eigh(Mij)
 	rank = np.linalg.matrix_rank(Mij)
 	nullspace = N-rank
@@ -325,6 +338,8 @@ def logLikelihoodFn(config, N, n_c, L):
 	for i in range(nullspace, N):
 		logdetMdagger = logdetMdagger + np.log(eVal[i])
 		determinantProduct = determinantProduct*eVal[i]
+
+	# check the numerical accuracy of finding the reduced determinant by two methods
 	logDetError = 100*(logdetMdagger-np.log(determinantProduct))/logdetMdagger
 	determinantError = 100*(math.exp(logdetMdagger)-determinantProduct)/(math.exp(logdetMdagger))
 
@@ -346,7 +361,7 @@ def logLikelihoodFn(config, N, n_c, L):
 	print "log likelihood discrepancy = %s"%str(logLike-otherLogLike)
 	'''
 
-	# is the rank term indeed negligible?
+	# is the (N-1)/2 in the 2nd to last line in 4.15 indeed negligible?
 	percentRank = 100* np.absolute(logLike - logdetMdagger)/logLike
 	#print "The rank term term is %s %% of the log likelihood term"%(percentRank)
 
@@ -396,6 +411,7 @@ def OptimizeN_c(config, N, L, plotLogLikeVSn_c, ncMax):
 
 	maxLikelihood = logLike[0]
 	n_cStar = 1
+	# find nc that maximizes the log likelihood
 	for i in range(ncMax):
 		if logLike[i] > maxLikelihood:
 			maxLikelihood = logLike[i]
@@ -465,7 +481,7 @@ def newConfigVicsekMetric(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic,
 		else: raise Exception('Invalid noise type')
 		config2[n][2] = theta
 
-		# compute new positions for the particles
+		# compute new positions for the particles (3.2)
 		dx = nu * np.cos(config2[n][2])*dtVic
 		dy = nu * np.sin(config2[n][2])*dtVic
 		config2[n][0] = (config[n][0] + dx)%L
@@ -473,7 +489,7 @@ def newConfigVicsekMetric(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic,
 	averageRadiusLNeighbors = averageRadiusLNeighbors/float(N)
 	return config2
 
-# Iterates a Vicsek configuration over the next time step, birds only directly account for info from their own
+# Iterates a Vicsek configuration over the next time step, particles only directly account for info from their own
 # neighborhoods; NOT SYMMETRIC
 def newConfigVicsekTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L):
 	# introduce matrix of relative distance, D
@@ -506,7 +522,7 @@ def newConfigVicsekTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, J
 	#print "Naive topo neighborhood set = %s"%(nbhSet)
 
 	# next update Vicsek positions/velocities (note the asymmetry) 
-	# DON'T FORGET ABOUT THE SELF-COUNTING!!!!! not scaled by dt, J_vic
+	# DON'T FORGET ABOUT THE SELF-COUNTING! not scaled by dt, J_vic
 	config2 = [[0, 0, 0] for i in range(N)]
 	for i in range(N):
 		theta = 0
@@ -537,47 +553,9 @@ def newConfigVicsekTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, J
 		config2[i][1] = (config[i][1] + dy)%L
 	return config2
 
-# Iterates a Vicsek configuration over the next time step, 
-def newConfigVicsekSymTopoWEIRDFIXVERSION(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L):
-	config2 = [[0, 0, 0] for i in range(N)]
-	(Jij, nij) = VicsekInteractionMatrices(config, N, ncVic, L) # remember nii = 0
-
-	#compute n_i1 + n_i2 + ... + n_iN for m_ij scaling
-	n_i = [0 for i in range(N)]
-	for i in range(N):
-		sum_ni=0
-		for j in range(N):
-			sum_ni += nij[i][j]
-		n_i[i] = sum_ni
-		#print sum_ni
-			
-	for i in range(N):
-		theta = 0
-		# self-count first
-		spinx = np.cos(config[i][2])
-		spiny = np.sin(config[i][2])
-		for j in range(N):
-			spinx += JVic*dtVic*np.cos(config[j][2]) * (nij[i][j]/np.sqrt(n_i[i]))
-			spiny += JVic*dtVic*np.sin(config[j][2]) * (nij[i][j]/np.sqrt(n_i[i]))
-		# noiseless theta
-		theta = np.arctan2(spiny, spinx)
-		# noise term
-		if noiseType == "Uniform": theta += dtVic*np.random.uniform(-eta/2., eta/2.)
-		elif noiseType == "Gaussian": theta += dtVic*np.random.normal(0, sigmaVic)
-		else: raise Exception('Invalid noise type')
-		config2[i][2] = theta
-
-		# compute new positions for the particles
-		dx = nu * np.cos(config2[i][2])*dtVic
-		dy = nu * np.sin(config2[i][2])*dtVic
-		config2[i][0] = (config[i][0] + dx)%L
-		config2[i][1] = (config[i][1] + dy)%L
-	#print "SymTopo neighborhood set = %s"%(nij)
-	return config2
-
-
+# Iterates a Vicsek configuration over the next time step, using a symmetric, topological rule
 def newConfigVicsekSymTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L):
-	# Update equation for Vicsek flock, symmetric topological nbh (Sij)
+	# Update equation for Vicsek flock, symmetric topological neighborhood (Sij)
 	# ds_i = Arg(s_i + \sum Sij s_j) + noise * dt
 
 	config2 = [[0, 0, 0] for i in range(N)]
@@ -607,50 +585,7 @@ def newConfigVicsekSymTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic
 	#print "SymTopo neighborhood set = %s"%(nij)
 	return config2
 
-def newConfigVicsekLangevin(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L):
-	config2 = [[0, 0, 0] for i in range(N)]
-	(Jij, nij) = VicsekInteractionMatrices(config, N, ncVic, L)
-	for i in range(N):
-		theta = config[i][2]
-		for j in range(N):
-			theta += -JVic*dtVic*nij[i][j]*np.sin(theta-config[j][2])
-		# noise term
-		if noiseType == "Uniform": theta += dtVic*np.random.uniform(-eta/2., eta/2.)
-		elif noiseType == "Gaussian": theta += np.random.normal(0, dtVic**.5)
-		else: raise Exception('Invalid noise type')
-		config2[i][2] = theta
-
-		# compute new positions for the particles
-		dx = nu * np.cos(config2[i][2])*dtVic
-		dy = nu * np.sin(config2[i][2])*dtVic
-		config2[i][0] = (config[i][0] + dx)%L
-		config2[i][1] = (config[i][1] + dy)%L
-
-
-	return config2
-
-def newConfigVicsekLangevinOLDVERSION(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L):
-	config2 = [[0, 0, 0] for i in range(N)]
-	(Jij, nij) = VicsekInteractionMatrices(config, N, ncVic, L)
-	for i in range(N):
-		theta = config[i][2]
-		for j in range(N):
-			theta += -JVic*dtVic*nij[i][j]*np.sin(theta-config[j][2])
-		# noise term
-		if noiseType == "Uniform": theta += dtVic*np.random.uniform(-eta/2., eta/2.)
-		elif noiseType == "Gaussian": theta += dtVic*np.random.normal(0, sigmaVic)
-		else: raise Exception('Invalid noise type')
-		config2[i][2] = theta
-
-		# compute new positions for the particles
-		dx = nu * np.cos(config2[i][2])*dtVic
-		dy = nu * np.sin(config2[i][2])*dtVic
-		config2[i][0] = (config[i][0] + dx)%L
-		config2[i][1] = (config[i][1] + dy)%L
-
-
-	return config2
-
+# calls the appropriate Vicsek ineraction rules based on parameter "ineractionType"
 def newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L):
 
 	if interactionType == "metric": 
@@ -659,8 +594,6 @@ def newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta,
 		config2 = newConfigVicsekTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
 	elif interactionType == "symTopo":
 		config2 = newConfigVicsekSymTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
-	elif interactionType == "langevin":
-		config2 = newConfigVicsekLangevin(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
 	else: raise Exception('Invalid interaction type')
 
 	return config2
