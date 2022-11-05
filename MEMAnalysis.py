@@ -1,4 +1,5 @@
-# Read flock data, execute MEM, plot data
+# Read flock data, run the maximum entropy model, plot data
+# Author - Russell Burton
 import numpy as np
 import ThesisFunctions as tf
 import math
@@ -12,25 +13,20 @@ plotLogLikeVSncGlobal = "yes"
 figureIndex = 15 # parameter that keeps track of which figure you're on, start high to be sure
 ncMax = 99
 
-#import Vicsek parameters from 1st line of data file
-f = open("FinalDataandPlots/nstarVSnv/nVicVSnstar9.txt", "r")
+# import Vicsek parameters from 1st line of data file
+f = open("VicsekData.txt", "r")
 fl = f.readlines()
 (interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium, snapsPerFlock, pollInterval, numFlocks) = tf.importVicsekParam(fl[0])
-betaVic = 2./sigmaVic
+betaVic = 2./sigmaVic # sigmaVic is the standard distribution of the noise
 JprodVicsek = JVic*betaVic
-print "Jprod for the ENTIRE Vicsek flock is %s at n_cVic = %s"%(JprodVicsek, ncVic)
-print ""
+print ("Jprod for the ENTIRE Vicsek flock is %s at n_cVic = %s"%(JprodVicsek, ncVic))
+print ("")
 
-
-###############################################
-# HACK TO PUT ALL FLOCKS INTO ONE SIMULATION
+# Put all flocks into one simulation
 snapsPerFlock = snapsPerFlock*numFlocks
 numFlocks=1
-###############################################
 
-
-
-# initialize the data we take for every frame. For quantity X we have list X[i][t]: ith ctn flock, t'th
+# initialize the data we take for every frame. For quantity X we have list X[i][t]: ith continuous flock
 # t'th snapshot within that flock
 optimalNcSnapshot = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
 optimalJSnapshot = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
@@ -38,10 +34,11 @@ detProdTensor = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
 ncCorrTensor = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
 avMagnetization = [0 for j in range(numFlocks)]
 
+# Run the MEM on each snapshot
 for flockID in range(numFlocks):
 	for t in range(snapsPerFlock):
 		lineIndex = snapsPerFlock*flockID + t + 1 # grab the correct configuration from file
-		#print "lineIndex = %s, flockID = %s/%s, t = %s/%s"%(lineIndex, flockID, numFlocks, t, snapsPerFlock)
+		#print ("lineIndex = %s, flockID = %s/%s, t = %s/%s"%(lineIndex, flockID, numFlocks, t, snapsPerFlock))
 		configLine = fl[lineIndex]
 		config = tf.importConfig(configLine, N)
 
@@ -50,43 +47,37 @@ for flockID in range(numFlocks):
 		
 		optimalNcSnapshot[flockID][t] = ncOptimalSnap
 		optimalJSnapshot[flockID][t] = Jsnap
-		print "\rOptimal J snapshot is %s, Optimal n_c snapshot is %s"%(Jsnap, ncOptimalSnap)
-		print avMagnetization[flockID]
+		print ("\rOptimal J snapshot is %s, Optimal n_c snapshot is %s"%(Jsnap, ncOptimalSnap))
+		print (avMagnetization[flockID])
 		(M, theta_0) = tf.Magnetization(config, N)
 		avMagnetization[flockID] += M
-	#print detProdTensor[0]
-	#print ncCorrTensor[0]15# each compenent refers to J global of the 
 	avMagnetization[flockID] = avMagnetization[flockID]/snapsPerFlock
 globalJVec, JarithAvVec = tf.globalJ(optimalJSnapshot, numFlocks, snapsPerFlock)
-print "Global J Vector: %s"%globalJVec
+print ("Global J Vector: %s"%globalJVec)
 globalNcVec, ncArithAvVec, highestAvLogLike = tf.globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFlock, plotLogLikeVSncGlobal, ncMax)
-print "Average Magnetization vector = %s"%avMagnetization
+print ("Average Magnetization vector = %s"%avMagnetization)
 '''
-print "Average J Vector = %s\n"%JarithAv
-print "Global J Vector = %s\n"%globalJVector
-print "Product of all possible determinants = %s \n"%detProdTensor
-print "Every single nc correlation = %s"%(ncCorrTensor)
+print ("Average J Vector = %s\n"%JarithAv)
+print ("Global J Vector = %s\n"%globalJVector)
+print ("Product of all possible determinants = %s \n"%detProdTensor)
+print ("Every single nc correlation = %s"%(ncCorrTensor))
 '''
-print "Global J Vector = %s\n"%globalJVec
-print "Global nc = %s"%globalNcVec
+print ("Global J Vector = %s\n"%globalJVec)
+print ("Global nc = %s"%globalNcVec)
 
 # print arithmetic n_c estimate and its variance
 arithAvNc = 0
 arithAvNcSq = 0
 ncVector = []
-k=0
 for flockID in range(numFlocks):
 	for t in range(snapsPerFlock):
 		ncVector.append(optimalNcSnapshot[flockID][t])
-		#arithAvNc += float(optimalNcSnapshot[flockID][t])/(numFlocks*snapsPerFlock)
-		#arithAvNcSq += float(optimalNcSnapshot[flockID][t]**2)/(numFlocks*snapsPerFlock)
-		k+=1 
 arithAvNc = np.average(ncVector)
 stdDevNc = np.std(ncVector)
 #stdDevNc = np.sqrt(arithAvNcSq - arithAvNc**2)
-print "Arithmetic <n*> = %s"%arithAvNc
-print "Arithmetic <n*> Standard Dev = %s"%stdDevNc
-print "LogLike of ng = %s"%highestAvLogLike
+print ("Arithmetic <n*> = %s"%arithAvNc)
+print ("Arithmetic <n*> Standard Dev = %s"%stdDevNc)
+print ("LogLikelihood of n_global = %s"%highestAvLogLike)
 
 plt.show()
 
