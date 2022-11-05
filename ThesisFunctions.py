@@ -1,4 +1,5 @@
-# Miscellaneous function file
+# Function file for both FlockSim.py and MEMAnalysis.py
+# Author - Russell Burton
 import numpy as np
 import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
@@ -10,7 +11,10 @@ import sys
 import time
 import re
 
-# returns most likely n_c provided that n_c is known to be constant across all snapshots
+# Executes the algorithm described at the end of Appendix B
+# Returns most likely number of nearest neighbors used for computing interaction (n_c),
+# provided that n_c is known to be constant across all snapshots
+#
 # detProdTensor - vector of vectors of determinant products over consecutive snapshots
 # ncCorrTensor - vector of vectors of nearest nc neighbor correlation over many snapshots
 # N - number of particles in the flock
@@ -18,13 +22,13 @@ import re
 def globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFlock, plotLogLikeVSncGlobal, ncMax):
 	globalNcVec = [0 for i in range(numFlocks)]
 	ncArithAvVec = [0 for i in range(numFlocks)]
-
 	figureIndx = 70
+
 	for flockID in range(numFlocks):
 		# this vector measures the average likelihood over all snapshots for J_g at each desired n_c
 		logLikeAverage = [0 for i in range(ncMax)]
 		for nc in range(1, ncMax+1):
-			# one of the lines in equation 4.15
+			# total log likelihood function from one the lines in equation 4.15, also L_tot in 8.1
 			for t in range(snapsPerFlock):
 				logLike = 0.5*(N-1)*np.log((globalJVec[flockID]/(2*math.pi)))
 				logLike += 0.5*np.log(detProdTensor[flockID][t][nc-1])
@@ -32,10 +36,9 @@ def globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFloc
 				logLikeAverage[nc-1] += logLike
 			logLikeAverage[nc-1] = logLikeAverage[nc-1]/snapsPerFlock
 
+		# look for highest average likelihood, starting with the first index
 		highestAvLikelihood = logLikeAverage[0]
 		for nc in range(1, ncMax+1):
-			# choose whichever is larger, the 
-			# EXPLAIN THIS BETTER
 			if logLikeAverage[nc-1] > highestAvLikelihood: 
 				globalNcVec[flockID] = nc
 				highestAvLikelihood = logLikeAverage[nc-1]
@@ -58,10 +61,9 @@ def globalNC(detProdTensor, globalJVec, ncCorrTensor, N, numFlocks, snapsPerFloc
 
 	return globalNcVec, ncArithAvVec, highestAvLikelihood
 
-# returns the most likely J (interaction strength) provided that J is known to be 
+# Returns the most likely J (interaction strength) provided that J is known to be 
 # constant across all snapshots
-# opimalJSnapshot - ?????
-# see equation 8.6 in Appendix
+# See equation 8.6 in Appendix
 def globalJ(optimalJSnapshot, numFlocks, snapsPerFlock):
 	globalJVector = [0 for i in range(numFlocks)]
 	JarithmeticAvVec = [0 for i in range(numFlocks)]
@@ -75,9 +77,10 @@ def globalJ(optimalJSnapshot, numFlocks, snapsPerFlock):
 		globalJVector[flock] = snapsPerFlock/inverseSum
 	return (globalJVector, JarithmeticAvVec)
 
-# import a flock snapshot from a line in the textfile
+# Import a flock snapshot from a line in the textfile
 def importConfig(configLine, N):
 	config = [[0, 0, 0] for j in range(N)]
+	# regex find that allows for numbers written in scientific notation
 	parsedNumbers = re.findall('-?\d+\.\d+e?-?\d*', configLine)
 
 	for i in range(N):
@@ -89,7 +92,7 @@ def importConfig(configLine, N):
 			config[i][j] = float(config[i][j])
 	return config
 
-# return the flock parameters in a flock data file, properly typecasted
+# Return the flock parameters in a flock data file, typecast to check for import errors
 def importVicsekParam(fileLine1):
 	(interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium, snapshotsPerFlock, pollInterval, numFlocks, BLANK) = re.split(",", fileLine1)
 	#print ("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s"%(interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium,snapshotsPerFlock, pollInterval,numFlocks, BLANK))
@@ -108,7 +111,7 @@ def importVicsekParam(fileLine1):
 	numFlocks=int(numFlocks)
 	return (interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium, snapshotsPerFlock, pollInterval, numFlocks)
 
-# plots Vicsek magnetization vs time
+# Plots Vicsek magnetization vs time
 def plotVicsekMvsTime(MvsT):
 	# time snapshot vector (x axis)
 	t = [i for i in range(len(MvsT))]
@@ -147,7 +150,7 @@ def checkVicsekNcSize(config, N, ncVic, L):
 
 
 
-# plots a given Vicsek configuration
+# Plots a given Vicsek configuration
 def PlotVicsek(config, N, L, keepPlot):
 	X = [config[i][0] for i in range(N)]
 	Y = [config[j][1] for j in range(N)] 
@@ -172,7 +175,7 @@ def PlotVicsek(config, N, L, keepPlot):
 	return
 
 
-# computes magnetization of a Vicsek flock
+# Computes magnetization of a Vicsek flock
 def Magnetization(config, N):
 	Mx = 0
 	My = 0
@@ -188,7 +191,7 @@ def Magnetization(config, N):
 	return (M, theta_0)
 
 
-# takes true distance of Vicsek particles i and j accounting for periodic boundary conditions
+# Takes true distance of Vicsek particles i and j accounting for periodic boundary conditions
 def VicsekDistanceSq(config, i, j, L):
 	x1 = config[i][0]
 	x2 = config[j][0]
@@ -210,6 +213,7 @@ def VicsekDistanceSq(config, i, j, L):
 
 	# sort list to find shortest distance from point i to point j
 	possibleDist.sort()
+	# check to make sure the minimum distance isn't longer than should be possible
 	if possibleDist[0] > (float(L)**2)/2:
 		print ("BOUNDARY CONDITIONS ARE MESSED UP i=%s j=%s"%(i, j))
 		print ("x1=%s y1=%s"%(x1, y1))
@@ -219,7 +223,7 @@ def VicsekDistanceSq(config, i, j, L):
 	return possibleDist[0]
 
 
-# computes matrices J_ij and S_ij from a Vicsek configuration
+# Computes adjacency matrices J_ij and S_ij from a Vicsek configuration
 # J_ij from equation 4.4
 # S_ij from equation 4.6 (labeled n_ij)
 def VicsekInteractionMatrices(config, N, n_c, L):
@@ -247,7 +251,7 @@ def VicsekInteractionMatrices(config, N, n_c, L):
 					Sij[l][i] += 0.5
 	return Jij, Sij
 
-# computes the average correlation up to range n_c (<Psi>_exp)
+# computes the nearest-neighbor average correlation with n_c nearest neighbors (<Psi>_exp)
 def nnAvCorrelation(config, N, n_c, Jij):
 	L=9
 	if Jij == 0:
@@ -260,6 +264,7 @@ def nnAvCorrelation(config, N, n_c, Jij):
 	LocalCorr = float(LocalCorr)/(N*n_c)
 	return LocalCorr
 
+# Computes the eigenvalues of the Laplacian matrix given the symmetric adjacency matrix Sij
 def laplacianEigenvalues(Sij, N, n_c):
 	# find sum of each row/column of Sij (important number in our computation)
 	SrowSum = [0 for i in range(N)]
@@ -280,8 +285,8 @@ def laplacianEigenvalues(Sij, N, n_c):
 
 	return (eVal, nullspace)
 
-# computes the log likelihood for a given Vicsek configuration and n_c
-# automatically computes S_ij for you
+# Computes the log likelihood for a given Vicsek configuration and n_c
+# Automatically computes S_ij for you
 def logLikelihoodFn(config, N, n_c, L):
 	(Jij, Sij) = VicsekInteractionMatrices(config, N, n_c, L)
 	# find sum of each row/column of Sij (important number in our computation)
@@ -312,9 +317,8 @@ def logLikelihoodFn(config, N, n_c, L):
 	#print ("Biggest 0-eigenvalue is %s"%(eVal[nullspace - 1]))
 	#print ("Spectral Gap is %s"%(eVal[nullspace]))
 	'''if (N - rank) > 1:
-		print ("\nn_c = %s HAS AN ADDITIONAL %s SYMMETRIES "%(n_c, N - rank - 1))'''
-	
-	'''
+		print ("\nn_c = %s HAS AN ADDITIONAL %s SYMMETRIES "%(n_c, N - rank - 1))
+
 	# check for negative eigenvalues
 	negativeEigenvals = 0
 	print ("Eigenvalues: %s"%(eVal))
@@ -328,7 +332,6 @@ def logLikelihoodFn(config, N, n_c, L):
 			if eVal[k] < 0: print (">>>>>>>>>> a_%s = %s <<<<<<<<<<"%(k, eVal[k]))
 	'''
 
-	#np.log is base e
 	logLike = 0
 
 	# include the reduced determinant term
@@ -345,9 +348,10 @@ def logLikelihoodFn(config, N, n_c, L):
 	if logDetError > 0.01 or determinantError > 0.0001: 
 		print ("DETERMINANT ERROR WAS BIG, %s OR LOG DETERMINANT ERROR WAS BIG, %s"%(determinantError,logDetError))
 	#print ("logdetMdagger = %s"%(logdetMdagger))
+
+	# sum up the terms to compute the log likelihood (the last line of 4.15)
 	logLike = logdetMdagger
 	detContribution = logdetMdagger
-
 	ncCorr = nnAvCorrelation(config, N, n_c, Jij)
 	corrContribution = -rank*np.log(n_c*(1- ncCorr))
 	logLike = logLike + corrContribution
@@ -366,7 +370,8 @@ def logLikelihoodFn(config, N, n_c, L):
 
 	return logLike, detContribution, corrContribution, determinantProduct, ncCorr
 
-# finds optimal value of n_c for a single snapshot by maximizing its log liklihood
+# Finds optimal value of n_c for a single snapshot 
+# (the n_c that maximizes the log likelihood)
 def OptimizeN_c(config, N, L, plotLogLikeVSn_c, ncMax):
 	#ranges from 0 to N-1, and we just discount the 0th entry
 	logLike = [0 for i in range(0, N-1)]
@@ -416,7 +421,7 @@ def OptimizeN_c(config, N, L, plotLogLikeVSn_c, ncMax):
 			maxLikelihood = logLike[i]
 			n_cStar = i+1
 
-	# compute optimal Jsnap
+	# compute optimal Jsnap (J of the snapshot)
 	(Jij, Sij) = VicsekInteractionMatrices(config, N, n_cStar, L)
 	ncCorrOpt = nnAvCorrelation(config, N, n_cStar, Jij)
 	JsnapOpt = (N-1)/(N * n_cStar * (1-ncCorrOpt))
@@ -467,7 +472,7 @@ def newConfigVicsekMetric(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic,
 				else: 
 					spinx += np.cos(config[m][2])*dtVic*JVic
 					spiny += np.sin(config[m][2])*dtVic*JVic
-					#self-interaction does not count towards n_c^EXP
+					# only iterate neighbors by one when m =/= n
 					neighbors += 1 
 		averageRadiusLNeighbors += neighbors
 
@@ -584,7 +589,7 @@ def newConfigVicsekSymTopo(noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic
 	#print ("SymTopo neighborhood set = %s"%(nij))
 	return config2
 
-# calls the appropriate Vicsek ineraction rules based on parameter "ineractionType"
+# Calls the appropriate Vicsek ineraction rules based on parameter "interactionType"
 def newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L):
 
 	if interactionType == "metric": 
