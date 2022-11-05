@@ -1,4 +1,5 @@
-# Read flock data, execute MEM, plot data
+# Read flock data, run the maximum entropy model, plot data
+# Author - Russell Burton
 import numpy as np
 import ThesisFunctions as tf
 import math
@@ -12,7 +13,7 @@ plotLogLikeVSncGlobal = "yes"
 figureIndex = 15 # parameter that keeps track of which figure you're on, start high to be sure
 ncMax = 99
 
-#import Vicsek parameters from 1st line of data file
+# import Vicsek parameters from 1st line of data file
 f = open("VicsekData.txt", "r")
 fl = f.readlines()
 (interactionType, noiseType, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L, framesToEquilibrium, snapsPerFlock, pollInterval, numFlocks) = tf.importVicsekParam(fl[0])
@@ -21,14 +22,9 @@ JprodVicsek = JVic*betaVic
 print ("Jprod for the ENTIRE Vicsek flock is %s at n_cVic = %s"%(JprodVicsek, ncVic))
 print ("")
 
-
-###############################################
 # Put all flocks into one simulation
 snapsPerFlock = snapsPerFlock*numFlocks
 numFlocks=1
-###############################################
-
-
 
 # initialize the data we take for every frame. For quantity X we have list X[i][t]: ith continuous flock
 # t'th snapshot within that flock
@@ -38,6 +34,7 @@ detProdTensor = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
 ncCorrTensor = [[0 for i in range(snapsPerFlock)] for j in range(numFlocks)]
 avMagnetization = [0 for j in range(numFlocks)]
 
+# Run the MEM on each snapshot
 for flockID in range(numFlocks):
 	for t in range(snapsPerFlock):
 		lineIndex = snapsPerFlock*flockID + t + 1 # grab the correct configuration from file
