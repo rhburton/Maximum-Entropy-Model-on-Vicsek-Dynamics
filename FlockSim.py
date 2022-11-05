@@ -1,10 +1,12 @@
 # Simulate Vicsek flocking, write data to files
+# Author - Russell Burton
 import numpy as np
 import ThesisFunctions as tf
 import math
 import matplotlib.pyplot as plt
 import sys
 
+# Name/create data text file
 fileName = "VicsekData.txt"
 f = open(fileName,"w+")
 
@@ -12,6 +14,7 @@ f = open(fileName,"w+")
 interactionType = "symTopo" # POSSIBLE OPTIONS: "metric", "topo", "symTopo"
 noiseType = "Uniform" 		# POSSIBLE OPTIONS: "Gaussian", "Uniform"
 keepPlot = True
+
 # initialize Vicsek variables (time-continuous)
 N=100			# number of particles
 L=1 			# system length/width
@@ -24,14 +27,13 @@ ncVic = 5		# number of Vicsek interacting neighbors
 # SELECT NOISE TYPE
 betaVic = 1 	#IF GAUSSIAN NOISE
 sigmaVic = 2./betaVic
-
-eta = 0.3   	#IF UNIFORM NOISE (see definition after 3.1 in thesis, units of radians (?))
+eta = 0.3   	#IF UNIFORM NOISE (see definition after 3.1 in thesis, units of radians)
 
 #config = (particle number, (xpos, ypos, angle))
 config = [[np.random.uniform(0, L), np.random.uniform(0, L), np.random.uniform(0, 2*math.pi)] for i in range(N)]
 config = [[np.random.uniform(0, L), np.random.uniform(0, L), 1] for i in range(N)]
 
-# Determinant Product is zero if the flocks are non-interacting (if so, throw out this run)
+# Determinant Product is zero if there are non-interacting sub-flocks (if so, throw out this run)
 if interactionType != "metric":
 	logDetProd = tf.checkVicsekNcSize(config, N, ncVic, L)
 print ("Determinant Product = %s"%logDetProd)
@@ -43,7 +45,7 @@ print ("MEM expects an n_c nearest neighbor correlation of %s"%expectedCorrNcV)
 
 
 ######################################################################
-# Parameters governing when flocks are polled
+# Parameters governing how often the flocks are polled
 ######################################################################
 t=0 						# frame number
 framesToEquilibrium = 100 	# wait this many frames before beginning draw
@@ -57,8 +59,8 @@ f.write("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,\n"%(interactionType, noiseTy
 
 
 # Evolve the flock over time
-cutoffM = 0.999 		# say flock has thermalized once the magnetization reaches this threshold
-cutoffCorrNcV = 0.3 	# say flock has thermalized once this nearest neighbor correlation has been reached
+cutoffM = 0.999 		# If the magnetization reaches this threshold the MEM really struggles, try to avoid this regime
+cutoffCorrNcV = 0.3 	# Say flock has thermalized once this nearest neighbor correlation has been reached
 
 # This first while loop is to reach thermal equilibrium
 while True:
@@ -79,12 +81,12 @@ while True:
 		CorrNcV = tf.nnAvCorrelation(config, N, ncVic, 0)
 		(M, theta0) = tf.Magnetization(config, N)
 		# this cutoff is to alert us if the flock has very very high magnetization 
-		# (MEM model is unstable in this situation)
 		if M > cutoffM:
 			print ("\rM cutoff reached")
 			for j in range(framesToEquilibrium):
 				config = tf.newConfigVicsek(interactionType, noiseType, config, N, ncVic, sigmaVic, eta, nu, dtVic, JVic, L)
 			break
+		# thermalized condition
 		if CorrNcV > cutoffCorrNcV:
 			print ("\rCorrNcV cutoff reached")
 			for j in range(framesToEquilibrium):
@@ -102,7 +104,7 @@ for i in range(numFlocks):
 		#tf.PlotVicsek(config, N, L, keepPlot)
 		f.write("%s\n"%(config))
 		tf.PlotVicsek(config, N, L, keepPlot)
-		# print to consol the CorrNcV and estimated Jbeta info
+		# print to console the CorrNcV and estimated Jbeta info
 		CorrNcV = tf.nnAvCorrelation(config, N, ncVic, 0)
 		JBeta_MEM = 1/(ncVic * (1-CorrNcV))
 		print ("CorrN_c = %s, JBeta_MEM = %s"%(tf.nnAvCorrelation(config, N, ncVic, 0), JBeta_MEM))
